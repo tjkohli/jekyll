@@ -2,12 +2,12 @@
 
 module Jekyll
   class Renderer
+    attr_reader :document, :site, :payload
 
-    attr_reader :document, :site
-
-    def initialize(site, document)
+    def initialize(site, document, site_payload = nil)
       @site     = site
       @document = document
+      @payload  = site_payload || site.site_payload
     end
 
     # Determine which converters to use based on this document's
@@ -22,7 +22,7 @@ module Jekyll
     #
     # Returns the output extname including the leading period.
     def output_ext
-      converters.first.output_ext(document.extname)
+      @output_ext ||= (permalink_ext || converter_output_ext)
     end
 
     ######################
@@ -30,29 +30,43 @@ module Jekyll
     ######################
 
     def run
-      payload = Utils.deep_merge_hashes({
-        "page" => document.to_liquid
-      }, site.site_payload)
+      Jekyll.logger.debug "Rendering:", document.relative_path
 
-      info = {
-        filters:   [Jekyll::Filters],
-        registers: { :site => site, :page => payload['page'] }
-      }
+      payload["page"] = document.to_liquid
+
+      if document.respond_to? :pager
+        payload["paginator"] = document.pager.to_liquid
+      end
+
+      if document.is_a?(Document) && document.collection.label == 'posts'
+        payload['site']['related_posts'] = document.related_posts
+      end
 
       # render and transform content (this becomes the final content of the object)
-      payload["highlighter_prefix"] = converters.first.highlighter_prefix
-      payload["highlighter_suffix"] = converters.first.highlighter_suffix
+      payload['highlighter_prefix'] = converters.first.highlighter_prefix
+      payload['highlighter_suffix'] = converters.first.highlighter_suffix
+
+      Jekyll.logger.debug "Pre-Render Hooks:", document.relative_path
+      document.trigger_hooks(:pre_render, payload)
+
+      info = {
+        :filters   => [Jekyll::Filters],
+        :registers => { :site => site, :page => payload['page'] }
+      }
 
       output = document.content
 
       if document.render_with_liquid?
-        output = render_liquid(output, payload, info)
+        Jekyll.logger.debug "Rendering Liquid:", document.relative_path
+        output = render_liquid(output, payload, info, document.path)
       end
 
+      Jekyll.logger.debug "Rendering Markup:", document.relative_path
       output = convert(output)
       document.content = output
 
       if document.place_in_layout?
+        Jekyll.logger.debug "Rendering Layout:", document.relative_path
         place_in_layouts(
           output,
           payload,
@@ -73,7 +87,8 @@ module Jekyll
         begin
           converter.convert output
         rescue => e
-          Jekyll.logger.error "Conversion error:", "#{converter.class} encountered an error converting '#{document.relative_path}'."
+          Jekyll.logger.error "Conversion error:", "#{converter.class} encountered an error while converting '#{document.relative_path}':"
+          Jekyll.logger.error("", e.to_s)
           raise e
         end
       end
@@ -88,7 +103,7 @@ module Jekyll
     #
     # Returns the content, rendered by Liquid.
     def render_liquid(content, payload, info, path = nil)
-      Liquid::Template.parse(content).render!(payload, info)
+      site.liquid_renderer.file(path).parse(content).render!(payload, info)
     rescue Tags::IncludeTagError => e
       Jekyll.logger.error "Liquid Exception:", "#{e.message} in #{e.path}, included in #{path || document.relative_path}"
       raise e
@@ -121,21 +136,22 @@ module Jekyll
       used   = Set.new([layout])
 
       while layout
-        payload = Utils.deep_merge_hashes(
-          payload,
-          {
-            "content" => output,
-            "page"    => document.to_liquid,
-            "layout"  => layout.data
-          }
-        )
+        payload['content'] = output
+        payload['page']    = document.to_liquid
+        payload['layout']  = Utils.deep_merge_hashes(payload['layout'] || {}, layout.data)
 
         output = render_liquid(
           layout.content,
           payload,
           info,
-          File.join(site.config['layouts'], layout.name)
+          File.join(site.config['layouts_dir'], layout.name)
         )
+
+        # Add layout to dependency tree
+        site.regenerator.add_dependency(
+          site.in_source_dir(document.path),
+          site.in_source_dir(layout.path)
+        ) if document.write?
 
         if layout = site.layouts[layout.data["layout"]]
           if used.include?(layout)
@@ -149,5 +165,27 @@ module Jekyll
       output
     end
 
+    private
+
+    def permalink_ext
+      if document.permalink && !document.permalink.end_with?("/")
+        permalink_ext = File.extname(document.permalink)
+        permalink_ext unless permalink_ext.empty?
+      end
+    end
+
+    def converter_output_ext
+      if output_exts.size == 1
+        output_exts.last
+      else
+        output_exts[-2]
+      end
+    end
+
+    def output_exts
+      @output_exts ||= converters.map do |c|
+        c.output_ext(document.extname)
+      end.compact
+    end
   end
 end

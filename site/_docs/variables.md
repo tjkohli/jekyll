@@ -1,15 +1,13 @@
 ---
 layout: docs
 title: Variables
-prev_section: pages
-next_section: collections
 permalink: /docs/variables/
 ---
 
 Jekyll traverses your site looking for files to process. Any files with [YAML
 front matter](../frontmatter/) are subject to processing. For each of these
 files, Jekyll makes a variety of data available via the [Liquid templating
-system](http://wiki.shopify.com/Liquid). The
+system](https://github.com/Shopify/liquid/wiki). The
 following is a reference of the available data.
 
 ## Global Variables
@@ -105,10 +103,10 @@ following is a reference of the available data.
       <td><p>
 
         If the page being processed is a Post, this contains a list of up to ten
-        related Posts. By default, these are low quality but fast to compute.
+        related Posts. By default, these are the ten most recent posts.
         For high quality but slow to compute results, run the
         <code>jekyll</code> command with the <code>--lsi</code> (latent semantic
-        indexing) option.
+        indexing) option. Also note GitHub Pages does not support the <code>lsi</code> option when generating sites.
 
       </p></td>
     </tr>
@@ -116,9 +114,10 @@ following is a reference of the available data.
       <td><p><code>site.static_files</code></p></td>
       <td><p>
 
-        A list of all static files (i.e. files not processed by Jekyll's
-        converters or the Liquid renderer). Each file has three properties:
-        <code>path</code>, <code>modified_time</code> and <code>extname</code>.
+        A list of all <a href="/docs/static-files/">static files</a> (i.e.
+        files not processed by Jekyll's converters or the Liquid renderer).
+        Each file has three properties: <code>path</code>,
+        <code>modified_time</code> and <code>extname</code>.
 
       </p></td>
     </tr>
@@ -126,7 +125,15 @@ following is a reference of the available data.
       <td><p><code>site.html_pages</code></p></td>
       <td><p>
 
-        A list of all HTML Pages.
+        A subset of `site.pages` listing those which end in `.html`.
+
+      </p></td>
+    </tr>
+    <tr>
+      <td><p><code>site.html_files</code></p></td>
+      <td><p>
+
+        A subset of `site.static_files` listing those which end in `.html`.
 
       </p></td>
     </tr>
@@ -204,7 +211,7 @@ following is a reference of the available data.
       <td><p>
 
         The content of the Page, rendered or un-rendered depending upon
-        what Liquid is being processed and what `page` is.
+        what Liquid is being processed and what <code>page</code> is.
 
       </p></td>
     </tr>

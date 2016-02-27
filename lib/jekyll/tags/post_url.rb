@@ -3,16 +3,22 @@ module Jekyll
     class PostComparer
       MATCHER = /^(.+\/)*(\d+-\d+-\d+)-(.*)$/
 
-      attr_accessor :date, :slug
+      attr_reader :path, :date, :slug, :name
 
       def initialize(name)
-        all, path, date, slug = *name.sub(/^\//, "").match(MATCHER)
+        @name = name
+        all, @path, @date, @slug = *name.sub(/^\//, "").match(MATCHER)
         raise ArgumentError.new("'#{name}' does not contain valid date and/or title.") unless all
-        @slug = path ? path + slug : slug
-        @date = Utils.parse_date(date, "'#{name}' does not contain valid date.")
+
+        @name_regex = /^#{path}#{date}-#{slug}\.[^.]+/
       end
 
       def ==(other)
+        other.basename.match(@name_regex)
+      end
+
+      def deprecated_equality(other)
+        date = Utils.parse_date(name, "'#{name}' does not contain valid date and/or title.")
         slug == post_slug(other) &&
           date.year  == other.date.year &&
           date.month == other.date.month &&
@@ -26,11 +32,11 @@ module Jekyll
       #
       # Returns the post slug with the subdirectory (relative to _posts)
       def post_slug(other)
-        path = other.name.split("/")[0...-1].join("/")
+        path = other.basename.split("/")[0...-1].join("/")
         if path.nil? || path == ""
-          other.slug
+          other.data['slug']
         else
-          path + '/' + other.slug
+          path + '/' + other.data['slug']
         end
       end
     end
@@ -53,10 +59,20 @@ eos
       def render(context)
         site = context.registers[:site]
 
-        site.posts.each do |p|
-          if @post == p
-            return p.url
-          end
+        site.posts.docs.each do |p|
+          return p.url if @post == p
+        end
+
+        # New matching method did not match, fall back to old method
+        # with deprecation warning if this matches
+
+        site.posts.docs.each do |p|
+          next unless @post.deprecated_equality p
+          Jekyll::Deprecator.deprecation_message "A call to '{{ post_url #{@post.name} }}' did not match " \
+            "a post using the new matching method of checking name " \
+            "(path-date-slug) equality. Please make sure that you " \
+            "change this tag to match the post's name exactly."
+          return p.url
         end
 
         raise ArgumentError.new <<-eos

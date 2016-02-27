@@ -1,10 +1,14 @@
 require 'helper'
 require 'ostruct'
 
-class TestConvertible < Test::Unit::TestCase
+class TestConvertible < JekyllUnitTest
   context "yaml front-matter" do
     setup do
-      @convertible = OpenStruct.new
+      @convertible = OpenStruct.new(
+        "site" => Site.new(Jekyll.configuration(
+          "source" => File.expand_path('../fixtures', __FILE__)
+        ))
+      )
       @convertible.extend Jekyll::Convertible
       @base = File.expand_path('../fixtures', __FILE__)
     end
@@ -33,7 +37,7 @@ class TestConvertible < Test::Unit::TestCase
       out = capture_stderr do
         @convertible.read_yaml(@base, 'exploit_front_matter.erb')
       end
-      assert_no_match /undefined class\/module DoesNotExist/, out
+      refute_match /undefined class\/module DoesNotExist/, out
     end
 
     should "not parse if there is encoding error in file" do
@@ -44,6 +48,20 @@ class TestConvertible < Test::Unit::TestCase
       end
       assert_match(/invalid byte sequence in UTF-8/, out)
       assert_match(/#{File.join(@base, name)}/, out)
+    end
+
+    should "parse the front-matter but show an error if permalink is empty" do
+      name = 'empty_permalink.erb'
+      assert_raises(Errors::InvalidPermalinkError) do
+        @convertible.read_yaml(@base, name)
+      end
+    end
+
+    should "parse the front-matter correctly whitout permalink" do
+      out = capture_stderr do
+        @convertible.read_yaml(@base, 'front_matter.erb')
+      end
+      refute_match(/Invalid permalink/, out)
     end
   end
 end

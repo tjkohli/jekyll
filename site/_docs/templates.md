@@ -1,14 +1,12 @@
 ---
 layout: docs
 title: Templates
-prev_section: migrations
-next_section: permalinks
 permalink: /docs/templates/
 ---
 
-Jekyll uses the [Liquid](http://wiki.shopify.com/Liquid) templating language to
-process templates. All of the standard Liquid [tags](http://wiki.shopify.com/Logic) and
-[filters](http://wiki.shopify.com/Filters) are
+Jekyll uses the [Liquid](https://github.com/Shopify/liquid/wiki) templating language to
+process templates. All of the standard Liquid [tags](https://github.com/Shopify/liquid/wiki/Liquid-for-Designers#tags) and
+[filters](https://github.com/Shopify/liquid/wiki/Liquid-for-Designers#standard-filters) are
 supported. Jekyll even adds a few handy filters and tags of its own to make
 common tasks easier.
 
@@ -126,7 +124,7 @@ common tasks easier.
       </td>
       <td class="align-center">
         <p>
-         <code class="filter">{% raw %}{{ “foo,bar;baz?” | cgi_escape }}{% endraw %}</code>
+         <code class="filter">{% raw %}{{ "foo,bar;baz?" | cgi_escape }}{% endraw %}</code>
         </p>
         <p>
           <code class="output">foo%2Cbar%3Bbaz%3F</code>
@@ -142,7 +140,7 @@ common tasks easier.
       </td>
       <td class="align-center">
         <p>
-         <code class="filter">{% raw %}{{ “'foo, bar \\baz?'” | uri_escape }}{% endraw %}</code>
+         <code class="filter">{% raw %}{{ "foo, bar \baz?" | uri_escape }}{% endraw %}</code>
         </p>
         <p>
           <code class="output">foo,%20bar%20%5Cbaz?</code>
@@ -179,23 +177,23 @@ common tasks easier.
     </tr>
     <tr>
       <td>
-        <p class="name"><strong>Textilize</strong></p>
-        <p>Convert a Textile-formatted string into HTML, formatted via RedCloth</p>
-      </td>
-      <td class="align-center">
-        <p>
-         <code class="filter">{% raw %}{{ page.excerpt | textilize }}{% endraw %}</code>
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td>
         <p class="name"><strong>Markdownify</strong></p>
         <p>Convert a Markdown-formatted string into HTML.</p>
       </td>
       <td class="align-center">
         <p>
          <code class="filter">{% raw %}{{ page.excerpt | markdownify }}{% endraw %}</code>
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p class="name"><strong>Smartify</strong></p>
+        <p>Convert "quotes" into &ldquo;smart quotes.&rdquo;</p>
+      </td>
+      <td class="align-center">
+        <p>
+         <code class="filter">{% raw %}{{ page.title | smartify }}{% endraw %}</code>
         </p>
       </td>
     </tr>
@@ -208,6 +206,26 @@ common tasks easier.
         <p>
           <code class="filter">{% raw %}{{ some_scss | scssify }}{% endraw %}</code>
           <code class="filter">{% raw %}{{ some_sass | sassify }}{% endraw %}</code>
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p class="name"><strong>Slugify</strong></p>
+        <p>Convert a string into a lowercase URL "slug". See below for options.</p>
+      </td>
+      <td class="align-center">
+        <p>
+         <code class="filter">{% raw %}{{ "The _config.yml file" | slugify }}{% endraw %}</code>
+        </p>
+        <p>
+          <code class="output">the-config-yml-file</code>
+        </p>
+        <p>
+         <code class="filter">{% raw %}{{ "The _config.yml file" | slugify: 'pretty' }}{% endraw %}</code>
+        </p>
+        <p>
+          <code class="output">the-_config.yml-file</code>
         </p>
       </td>
     </tr>
@@ -239,9 +257,33 @@ common tasks easier.
         </p>
       </td>
     </tr>
+    <tr>
+      <td>
+        <p class="name"><strong>Sample</strong></p>
+        <p>Pick a random value from an array. Optional: pick multiple values.</p>
+      </td>
+      <td class="align-center">
+        <p>
+         <code class="filter">{% raw %}{{ site.pages | sample }}{% endraw %}</code>
+        </p>
+        <p>
+         <code class="filter">{% raw %}{{ site.pages | sample:2 }}{% endraw %}</code>
+        </p>
+      </td>
+    </tr>
   </tbody>
 </table>
 </div>
+
+### Options for the `slugify` filter
+
+The `slugify` filter accepts an option, each specifying what to filter.
+The default is `default`. They are as follows (with what they filter):
+
+- `none`: no characters
+- `raw`: spaces
+- `default`: spaces and non-alphanumeric characters
+- `pretty`: spaces and non-alphanumeric characters except for `._~!$&'()+,;=@`
 
 ## Tags
 
@@ -269,10 +311,10 @@ root of your source directory. This will embed the contents of
   </p>
 </div>
 
-You can also pass parameters to an include:
+You can also pass parameters to an include. Omit the quotation marks to send a variable's value. Liquid curly brackets should not be used here:
 
 {% highlight ruby %}
-{% raw %}{% include footer.html param="value" %}{% endraw %}
+{% raw %}{% include footer.html param="value" variable-param=page.variable %}{% endraw %}
 {% endhighlight %}
 
 These parameters are available via Liquid in the include:
@@ -281,18 +323,35 @@ These parameters are available via Liquid in the include:
 {% raw %}{{ include.param }}{% endraw %}
 {% endhighlight %}
 
+#### Including files relative to another file
+
+You can also choose to include file fragments relative to the current file:
+
+{% highlight ruby %}
+{% raw %}{% include_relative somedir/footer.html %}{% endraw %}
+{% endhighlight %}
+
+You won't need to place your included content within the `_includes` directory. Instead,
+the inclusion is specifically relative to the file where the tag is being used. For example,
+if `_posts/2014-09-03-my-file.markdown` uses the `include_relative` tag, the included file
+must be within the `_posts` directory, or one of its subdirectories. You cannot include
+files in other locations.
+
+All the other capabilities of the `include` tag are available to the `include_relative` tag,
+such as using variables.
+
 ### Code snippet highlighting
 
-Jekyll has built in support for syntax highlighting of [over 100
-languages](http://pygments.org/languages/) thanks to
-[Pygments](http://pygments.org/). To use Pygments, you must have Python installed
-on your system and set `highlighter` to `pygments` in your site's configuration
-file.
+Jekyll has built in support for syntax highlighting of over 60 languages
+thanks to [Rouge](http://rouge.jneen.net). Rouge is the default highlighter
+in Jekyll 3 and above. To use it in Jekyll 2, set `highlighter` to `rouge`
+and ensure the `rouge` gem is installed properly.
 
-Alternatively, you can use [Rouge](https://github.com/jayferd/rouge) to highlight
-your code snippets. It doesn't support as many languages as Pygments does but
-it should fit in most cases and it's written in pure Ruby ; you don't need Python
-on your system!
+Alternatively, you can use [Pygments](http://pygments.org) to highlight
+your code snippets. To use Pygments, you must have Python installed on your
+system, have the `pygments.rb` gem installed and set `highlighter` to
+`pygments` in your site's configuration file. Pygments supports [over 100
+languages](http://pygments.org/languages/)
 
 To render a code block with syntax highlighting, surround your code as follows:
 
@@ -308,9 +367,9 @@ end
 
 The argument to the `highlight` tag (`ruby` in the example above) is the
 language identifier. To find the appropriate identifier to use for the language
-you want to highlight, look for the “short name” on the [Pygments' Lexers
-page](http://pygments.org/docs/lexers/) or the [Rouge
-wiki](https://github.com/jayferd/rouge/wiki/List-of-supported-languages-and-lexers).
+you want to highlight, look for the “short name” on the [Rouge
+wiki](https://github.com/jayferd/rouge/wiki/List-of-supported-languages-and-lexers)
+or the [Pygments' Lexers page](http://pygments.org/docs/lexers/).
 
 #### Line numbers
 
@@ -371,7 +430,8 @@ You can also use this tag to create a link to a post in Markdown as follows:
 
 ### Gist
 
-Use the `gist` tag to easily embed a GitHub Gist onto your site. This works with public or secret gists:
+Use the `gist` tag to easily embed a GitHub Gist onto your site. This works
+with public or secret gists:
 
 {% highlight text %}
 {% raw %}
@@ -386,3 +446,6 @@ You may also optionally specify the filename in the gist to display:
 {% gist parkr/931c1c8d465a04042403 jekyll-private-gist.markdown %}
 {% endraw %}
 {% endhighlight %}
+
+To use the `gist` tag, you'll need to add the
+[jekyll-gist](https://github.com/jekyll/jekyll-gist) gem to your project.

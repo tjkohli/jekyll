@@ -1,8 +1,6 @@
 ---
 layout: docs
 title: Continuous Integration
-prev_section: deployment-methods
-next_section: troubleshooting
 permalink: /docs/continuous-integration/
 ---
 
@@ -22,7 +20,7 @@ Enabling Travis builds for your GitHub repository is pretty simple:
 2. Find the repository for which you're interested in enabling builds.
 3. Click the slider on the right so it says "ON" and is a dark grey.
 4. Optionally configure the build by clicking on the wrench icon. Further
-   configuration happens in you `.travis.yml` file. More details on that
+   configuration happens in your `.travis.yml` file. More details on that
    below.
 
 ## 2. The Test Script
@@ -35,6 +33,8 @@ When testing Jekyll output, there is no better tool than [html-proofer][2].
 This tool checks your resulting site to ensure all links and images exist.
 Utilize it either with the convenient `htmlproof` command-line executable,
 or write a Ruby script which utilizes the gem.
+
+Save the commands you want to run and succeed in a file: `./script/cibuild`
 
 ### The HTML Proofer Executable
 
@@ -50,6 +50,12 @@ Some options can be specified via command-line switches. Check out the
 `html-proofer` README for more information about these switches, or run
 `htmlproof --help` locally.
 
+For example to avoid testing external sites, use this command:
+
+{% highlight bash %}
+$ bundle exec htmlproof ./_site --disable-external
+{% endhighlight %}
+
 ### The HTML Proofer Library
 
 You can also invoke `html-proofer` in Ruby scripts (e.g. in a Rakefile):
@@ -62,7 +68,7 @@ HTML::Proofer.new("./_site").run
 {% endhighlight %}
 
 Options are given as a second argument to `.new`, and are encoded in a
-symbol-keyed Ruby Hash. More information about the configuration options,
+symbol-keyed Ruby Hash. For more information about the configuration options,
 check out `html-proofer`'s README file.
 
 [2]: https://github.com/gjtorikian/html-proofer
@@ -71,16 +77,33 @@ check out `html-proofer`'s README file.
 
 This file is used to configure your Travis builds. Because Jekyll is built
 with Ruby and requires RubyGems to install, we use the Ruby language build
-environment. Below is a sample `.travis.yml` file, and what follows that is
+environment. Below is a sample `.travis.yml` file, followed by
 an explanation of each line.
+
+**Note:** You will need a Gemfile as well, [Travis will automatically install](https://docs.travis-ci.com/user/languages/ruby/#Dependency-Management) the dependencies based on the referenced gems:
+
+{% highlight ruby %}
+source "https://rubygems.org"
+
+gem "jekyll"
+gem "html-proofer"
+{% endhighlight %}
+
+Your `.travis.yml` file should look like this:
 
 {% highlight yaml %}
 language: ruby
 rvm:
 - 2.1
+
+before_script:
+ - chmod +x ./script/cibuild # or do this locally and commit
+
+# Assume bundler is being used, therefore
+# the `install` step will run `bundle install` by default.
 script: ./script/cibuild
 
-# branch whitelist
+# branch whitelist, only for GitHub Pages
 branches:
   only:
   - gh-pages     # test the gh-pages branch
@@ -110,6 +133,16 @@ directive tells Travis the Ruby version to use when running your test
 script.
 
 {% highlight yaml %}
+before_script:
+ - chmod +x ./script/cibuild
+{% endhighlight %}
+
+The build script file needs to have the *executable* attribute set or
+Travis will fail with a permission denied error. You can also run this
+locally and commit the permissions directly, thus rendering this step
+irrelevant.
+
+{% highlight yaml %}
 script: ./script/cibuild
 {% endhighlight %}
 
@@ -120,13 +153,14 @@ customizable. If your script won't change much, you can write your test
 incantation here directly:
 
 {% highlight yaml %}
+install: gem install jekyll html-proofer
 script: jekyll build && htmlproof ./_site
 {% endhighlight %}
 
 The `script` directive can be absolutely any valid shell command.
 
 {% highlight yaml %}
-# branch whitelist
+# branch whitelist, only for GitHub Pages
 branches:
   only:
   - gh-pages     # test the gh-pages branch
@@ -142,7 +176,8 @@ a pull request flow for proposing changes, you may wish to enforce a
 convention for your builds such that all branches containing edits are
 prefixed, exemplified above with the `/pages-(.*)/` regular expression.
 
-The `branches` directive is completely optional.
+The `branches` directive is completely optional. Travis will build from every
+push to any branch of your repo if leave it out.
 
 {% highlight yaml %}
 env:
@@ -153,20 +188,29 @@ env:
 Using `html-proofer`? You'll want this environment variable. Nokogiri, used
 to parse HTML files in your compiled site, comes bundled with libraries
 which it must compile each time it is installed. Luckily, you can
-dramatically increase the install time of Nokogiri by setting the
+dramatically decrease the install time of Nokogiri by setting the
 environment variable `NOKOGIRI_USE_SYSTEM_LIBRARIES` to `true`.
 
-## 4. Gotchas
-
-### Exclude `vendor`
-
-Travis bundles all gems in the `vendor` directory on its build servers,
-which Jekyll will mistakenly read and explode on. To avoid this, exclude
-`vendor` in your `_config.yml`:
+<div class="note warning">
+  <h5>Be sure to exclude <code>vendor</code> from your
+   <code>_config.yml</code></h5>
+  <p>Travis bundles all gems in the <code>vendor</code> directory on its build
+   servers, which Jekyll will mistakenly read and explode on.</p>
+</div>
 
 {% highlight yaml %}
 exclude: [vendor]
 {% endhighlight %}
+
+### Troubleshooting
+
+**Travis error:** *"You are trying to install in deployment mode after changing
+your Gemfile. Run bundle install elsewhere and add the updated Gemfile.lock
+to version control."*
+
+**Workaround:** Either run `bundle install` locally and commit your changes to
+`Gemfile.lock`, or remove the `Gemfile.lock` file from your repository and add
+an entry in the `.gitignore` file to avoid it from being checked in again.
 
 ### Questions?
 
@@ -174,4 +218,4 @@ This entire guide is open-source. Go ahead and [edit it][3] if you have a
 fix or [ask for help][4] if you run into trouble and need some help.
 
 [3]: https://github.com/jekyll/jekyll/edit/master/site/_docs/continuous-integration.md
-[4]: https://github.com/jekyll/jekyll-help#how-do-i-ask-a-question
+[4]: http://jekyllrb.com/help/

@@ -2,19 +2,19 @@ module Jekyll
   module Converters
     class Markdown
       class RedcarpetParser
-
         module CommonMethods
           def add_code_tags(code, lang)
             code = code.to_s
             code = code.sub(/<pre>/, "<pre><code class=\"language-#{lang}\" data-lang=\"#{lang}\">")
-            code = code.sub(/<\/pre>/,"</code></pre>")
+            code = code.sub(/<\/pre>/, "</code></pre>")
+            code
           end
         end
 
         module WithPygments
           include CommonMethods
           def block_code(code, lang)
-            Jekyll::Deprecator.gracefully_require("pygments")
+            Jekyll::External.require_with_graceful_fail("pygments")
             lang = lang && lang.split.first || "text"
             add_code_tags(
               Pygments.highlight(code, :lexer => lang, :options => { :encoding => 'utf-8' }),
@@ -29,7 +29,7 @@ module Jekyll
           include CommonMethods
 
           def code_wrap(code)
-            "<div class=\"highlight\"><pre>#{CGI::escapeHTML(code)}</pre></div>"
+            "<figure class=\"highlight\"><pre>#{CGI::escapeHTML(code)}</pre></figure>"
           end
 
           def block_code(code, lang)
@@ -48,14 +48,13 @@ module Jekyll
           end
 
           protected
-          def rouge_formatter(opts = {})
-            Rouge::Formatters::HTML.new(opts.merge(wrap: false))
+          def rouge_formatter(_lexer)
+            Rouge::Formatters::HTML.new(:wrap => false)
           end
         end
 
-
         def initialize(config)
-          Deprecator.gracefully_require("redcarpet")
+          External.require_with_graceful_fail("redcarpet")
           @config = config
           @redcarpet_extensions = {}
           @config['redcarpet']['extensions'].each { |e| @redcarpet_extensions[e.to_sym] = true }
@@ -71,12 +70,12 @@ module Jekyll
             end
           when "rouge"
             Class.new(Redcarpet::Render::HTML) do
-              Jekyll::Deprecator.gracefully_require(%w[
+              Jekyll::External.require_with_graceful_fail(%w(
                 rouge
                 rouge/plugins/redcarpet
-              ])
+              ))
 
-              if Rouge.version < '1.3.0'
+              unless Gem::Version.new(Rouge.version) > Gem::Version.new("1.3.0")
                 abort "Please install Rouge 1.3.0 or greater and try running Jekyll again."
               end
 

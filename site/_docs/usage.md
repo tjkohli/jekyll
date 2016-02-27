@@ -1,8 +1,6 @@
 ---
 layout: docs
 title: Basic Usage
-prev_section: installation
-next_section: structure
 permalink: /docs/usage/
 ---
 
@@ -24,14 +22,30 @@ $ jekyll build --watch
 #    watched for changes, and regenerated automatically.
 {% endhighlight %}
 
+<div class="note info">
+  <h5>Changes to _config.yml are not included during automatic regeneration.</h5>
+  <p>
+    The <code>_config.yml</code> master configuration file contains global configurations
+    and variable definitions that are read once at execution time. Changes made to <code>_config.yml</code>
+    during automatic regeneration are not loaded until the next execution.
+  </p>
+  <p>
+    Note <a href="../datafiles">Data Files</a> are included and reloaded during automatic regeneration.
+  </p>
+</div>
+
 <div class="note warning">
   <h5>Destination folders are cleaned on site builds</h5>
   <p>
     The contents of <code>&lt;destination&gt;</code> are automatically
-    cleaned when the site is built.  Files or folders that are not
-    created by your site will be removed.  Do not use an important
-    location for <code>&lt;destination&gt;</code>; instead, use it as
-    a staging area and copy files from there to your web server.
+    cleaned, by default, when the site is built. Files or folders that are not
+    created by your site will be removed. Files and folders you wish to retain
+    in <code>&lt;destination&gt;</code> may be specified within the <code>&lt;keep_files&gt;</code>
+    configuration directive.
+  </p>
+  <p>
+    Do not use an important location for <code>&lt;destination&gt;</code>;
+    instead, use it as a staging area and copy files from there to your web server.
   </p>
 </div>
 
@@ -41,14 +55,24 @@ preview what the generated site will look like in your browser locally.
 {% highlight bash %}
 $ jekyll serve
 # => A development server will run at http://localhost:4000/
+# Auto-regeneration: enabled. Use `--no-watch` to disable.
 
 $ jekyll serve --detach
 # => Same as `jekyll serve` but will detach from the current terminal.
 #    If you need to kill the server, you can `kill -9 1234` where "1234" is the PID.
 #    If you cannot find the PID, then do, `ps aux | grep jekyll` and kill the instance. [Read more](http://unixhelp.ed.ac.uk/shell/jobz5.html).
+{% endhighlight %}
 
-$ jekyll serve --watch
-# => Same as `jekyll serve`, but watch for changes and regenerate automatically.
+<div class="note info">
+  <h5>Be aware of default behavior</h5>
+  <p>
+    As of version 2.4, the <code>serve</code> command will watch for changes automatically. To disable this, you can use <code>jekyll serve --no-watch</code>, which preserves the old behavior.
+  </p>
+</div>
+
+{% highlight bash %}
+$ jekyll serve --no-watch
+# => Same as `jekyll serve` but will not watch for changes.
 {% endhighlight %}
 
 These are just a few of the available [configuration options](../configuration/).
@@ -72,3 +96,6 @@ $ jekyll build --source _source --destination _deploy
 
 For more about the possible configuration options, see the
 [configuration](../configuration/) page.
+
+If you're interested in browsing these docs on-the-go, install the
+`jekyll-docs` gem and run `jekyll docs` in your terminal.
